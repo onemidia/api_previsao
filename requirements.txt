@@ -1,0 +1,4 @@
+Flask
+requests
+xml.etree.ElementTree
+gunicorn
