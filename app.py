@@ -1,7 +1,13 @@
 from flask import Flask, Response
 import requests
 import xml.etree.ElementTree as ET
-from config import OPENWEATHER_API_KEY, CITY, COUNTRY, XIBO_ICON_URL
+import os
+
+# Obtendo variáveis do ambiente
+OPENWEATHER_API_KEY = os.getenv("OPENWEATHER_API_KEY")
+CITY = os.getenv("CITY", "Taquaritinga")
+COUNTRY = os.getenv("COUNTRY", "BR")
+XIBO_ICON_URL = os.getenv("XIBO_ICON_URL", "https://seu-xibo.com/icones")
 
 app = Flask(__name__)
 
@@ -45,5 +51,4 @@ def rss_feed():
     return "Erro ao obter dados", 500
 
 if __name__ == "__main__":
-    port = int(os.environ.get("PORT", 10000))  # Render pode definir a porta dinamicamente
-    app.run(host="0.0.0.0", port=port)
+    app.run(host="0.0.0.0", port=8000)
