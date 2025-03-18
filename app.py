@@ -1,7 +1,11 @@
 from flask import Flask, Response
 import requests
 import xml.etree.ElementTree as ET
+import logging
 from config import OPENWEATHER_API_KEY, CITY, COUNTRY
+
+# Configuração do log
+logging.basicConfig(level=logging.DEBUG)
 
 app = Flask(__name__)
 
@@ -45,13 +49,23 @@ def generate_rss(data):
     
     return ET.tostring(rss, encoding='utf8', method='xml')
 
+@app.route("/")
+def home():
+    return "API de Previsão do Tempo - Feed RSS", 200
+
 @app.route("/rss")
 def rss_feed():
-    response = requests.get(API_URL)
-    if response.status_code == 200:
+    try:
+        response = requests.get(API_URL)
+        response.raise_for_status()
         rss = generate_rss(response.json())
         return Response(rss, mimetype='application/rss+xml')
-    return "Erro ao obter dados", 500
+    except requests.exceptions.RequestException as e:
+        app.logger.error(f"Erro ao obter dados da API: {e}")
+        return "Erro ao obter dados da API", 500
+    except Exception as e:
+        app.logger.error(f"Erro interno ao gerar o RSS: {e}")
+        return "Erro interno ao gerar o feed RSS", 500
 
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=8000)
