@@ -5,7 +5,7 @@ import xml.etree.ElementTree as ET
 app = Flask(__name__)
 
 # Chave da API do OpenWeatherMap
-API_KEY = "SUA_CHAVE_AQUI"
+API_KEY = "9a0dec7f2d04b94b78a7db7f1193fc51"
 CITY = "Taquaritinga,BR"
 URL = f"https://api.openweathermap.org/data/2.5/forecast?q={CITY}&appid={API_KEY}&units=metric&lang=pt_br"
 
