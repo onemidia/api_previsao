@@ -23,32 +23,23 @@ def get_xibo_icon(weather_icon_code):
     xibo_icon_id = icon_map.get(weather_icon_code, "48165")  # Ícone padrão: céu limpo (dia)
     return f"http://m.onemidia.tv.br/library/preview/{xibo_icon_id}"
 
-@app.route("/")
-def home():
-    return "<h1>API de Previsão do Tempo</h1><p>Acesse /rss para ver o feed RSS.</p>"
-    response = requests.get(URL)
-    weather_data = response.json()
-
-    rss = ET.Element("rss", version="2.0", xmlns_media="http://search.yahoo.com/mrss/")
-    channel = ET.SubElement(rss, "channel")
-    ET.SubElement(channel, "title").text = "Previsão do Tempo - Taquaritinga"
-    ET.SubElement(channel, "link").text = "http://m.onemidia.tv.br"
-    ET.SubElement(channel, "description").text = "Previsão do tempo para os próximos dias"
-
-    for forecast in weather_data["list"][:5]:  # Pegando apenas os primeiros 5 períodos
-        weather_icon_code = forecast["weather"][0]["icon"]
-        icon_url = get_xibo_icon(weather_icon_code)
-        temp = forecast["main"]["temp"]
-        description = forecast["weather"][0]["description"].capitalize()
-
-        item = ET.SubElement(channel, "item")
-        ET.SubElement(item, "title").text = "Previsão do Tempo"
-        ET.SubElement(item, "description").text = f"{description} - {temp}°C"
-        ET.SubElement(item, "link").text = "http://m.onemidia.tv.br"
-        media_content = ET.SubElement(item, "media:content", url=icon_url, type="image/png")
-
-    rss_feed = ET.tostring(rss, encoding="utf-8", method="xml").decode()
-    return Response(rss_feed, mimetype="application/xml")
+@app.route("/rss")
+def gerar_rss():
+    xml = """<?xml version="1.0" encoding="UTF-8"?>
+    <rss version="2.0">
+        <channel>
+            <title>Previsão do Tempo</title>
+            <description>Feed de previsão do tempo</description>
+            <link>https://seu-servidor.onrender.com/rss</link>
+            <item>
+                <title>Previsão de hoje</title>
+                <description>Tempo ensolarado com máximas de 30°C</description>
+                <link>https://seu-servidor.onrender.com/rss</link>
+            </item>
+        </channel>
+    </rss>
+    """
+    return Response(xml, mimetype="application/rss+xml")
 
 if __name__ == "__main__":
-    app.run(host="0.0.0.0", port=5000, debug=True)
+    app.run(host="0.0.0.0", port=10000)
