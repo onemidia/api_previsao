@@ -1,17 +1,13 @@
 from flask import Flask, Response
 import requests
 import xml.etree.ElementTree as ET
-import logging
 from config import OPENWEATHER_API_KEY, CITY, COUNTRY
-
-# Configuração do log
-logging.basicConfig(level=logging.DEBUG)
 
 app = Flask(__name__)
 
 API_URL = f"http://api.openweathermap.org/data/2.5/forecast?q={CITY},{COUNTRY}&appid={OPENWEATHER_API_KEY}&units=metric&lang=pt"
 
-XIBO_ICON_BASE_URL = "http://m.onemidia.tv.br/library/download"
+XIBO_ICON_BASE_URL = "http://m.onemidia.tv.br/library/view"
 
 ICON_MAPPING = {
     "01d": 48165, "01n": 48166, "02d": 48170, "02n": 48168, "03d": 48169, "03n": 48167,
@@ -40,7 +36,10 @@ def generate_rss(data):
             icon_url = f"{XIBO_ICON_BASE_URL}/{icon_id}?preview=1"
             
             ET.SubElement(entry, "title").text = f"{date}: {weather_desc}, {temp}°C"
-            ET.SubElement(entry, "description").text = f"Temperatura: {temp}°C - {weather_desc}"
+            ET.SubElement(entry, "description").text = (
+                f"<img src='{icon_url}' width='64' height='64'><br>"
+                f"Temperatura: {temp}°C - {weather_desc}"
+            )
             ET.SubElement(entry, "link").text = "https://seu-dominio.com/rss"
             ET.SubElement(entry, "pubDate").text = date
             enclosure = ET.SubElement(entry, "enclosure")
@@ -49,23 +48,13 @@ def generate_rss(data):
     
     return ET.tostring(rss, encoding='utf8', method='xml')
 
-@app.route("/")
-def home():
-    return "API de Previsão do Tempo - Feed RSS", 200
-
 @app.route("/rss")
 def rss_feed():
-    try:
-        response = requests.get(API_URL)
-        response.raise_for_status()
+    response = requests.get(API_URL)
+    if response.status_code == 200:
         rss = generate_rss(response.json())
         return Response(rss, mimetype='application/rss+xml')
-    except requests.exceptions.RequestException as e:
-        app.logger.error(f"Erro ao obter dados da API: {e}")
-        return "Erro ao obter dados da API", 500
-    except Exception as e:
-        app.logger.error(f"Erro interno ao gerar o RSS: {e}")
-        return "Erro interno ao gerar o feed RSS", 500
+    return "Erro ao obter dados", 500
 
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=8000)
