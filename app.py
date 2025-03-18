@@ -23,9 +23,9 @@ def get_xibo_icon(weather_icon_code):
     xibo_icon_id = icon_map.get(weather_icon_code, "48165")  # Ícone padrão: céu limpo (dia)
     return f"http://m.onemidia.tv.br/library/preview/{xibo_icon_id}"
 
-@app.route("/rss")
-def generate_rss():
-    """Gera o feed RSS com os dados da previsão do tempo formatados para o Xibo."""
+@app.route("/")
+def home():
+    return "<h1>API de Previsão do Tempo</h1><p>Acesse /rss para ver o feed RSS.</p>"
     response = requests.get(URL)
     weather_data = response.json()
 
