@@ -1,60 +1,54 @@
 from flask import Flask, Response
 import requests
 import xml.etree.ElementTree as ET
-from config import OPENWEATHER_API_KEY, CITY, COUNTRY
 
 app = Flask(__name__)
 
-API_URL = f"http://api.openweathermap.org/data/2.5/forecast?q={CITY},{COUNTRY}&appid={OPENWEATHER_API_KEY}&units=metric&lang=pt"
+# Chave da API do OpenWeatherMap
+API_KEY = "SUA_CHAVE_AQUI"
+CITY = "Taquaritinga,BR"
+URL = f"https://api.openweathermap.org/data/2.5/forecast?q={CITY}&appid={API_KEY}&units=metric&lang=pt_br"
 
-XIBO_ICON_BASE_URL = "http://m.onemidia.tv.br/library/view"
-
-ICON_MAPPING = {
-    "01d": 48165, "01n": 48166, "02d": 48170, "02n": 48168, "03d": 48169, "03n": 48167,
-    "04d": 48171, "04n": 48172, "09d": 48174, "09n": 48173, "10d": 48177, "10n": 48176,
-    "11d": 48175, "11n": 48178, "13d": 48179, "13n": 48180, "50d": 48152, "50n": 48149
+# Mapeamento de ícones do OpenWeatherMap para IDs no Xibo
+icon_map = {
+    "01d": "48165", "01n": "48166", "02d": "48170", "02n": "48168",
+    "03d": "48169", "03n": "48167", "04d": "48171", "04n": "48172",
+    "09d": "48174", "09n": "48173", "10d": "48177", "10n": "48176",
+    "11d": "48175", "11n": "48178", "13d": "48179", "13n": "48180",
+    "50d": "48152", "50n": "48149"
 }
 
-def generate_rss(data):
-    rss = ET.Element("rss", version="2.0")
-    channel = ET.SubElement(rss, "channel")
-    ET.SubElement(channel, "title").text = f"Previsão do Tempo - {CITY}"
-    ET.SubElement(channel, "link").text = "https://seu-dominio.com/rss"
-    ET.SubElement(channel, "description").text = "Previsão do tempo para os próximos 5 dias."
-    
-    added_dates = set()
-    
-    for item in data['list']:
-        date = item['dt_txt'].split(" ")[0]  # Pegando apenas a data (YYYY-MM-DD)
-        if date not in added_dates:
-            added_dates.add(date)
-            entry = ET.SubElement(channel, "item")
-            temp = item['main']['temp']
-            weather_desc = item['weather'][0]['description'].capitalize()
-            icon_code = item['weather'][0]['icon']
-            icon_id = ICON_MAPPING.get(icon_code, 48165)  # Padrão para 01d caso não encontre
-            icon_url = f"{XIBO_ICON_BASE_URL}/{icon_id}?preview=1"
-            
-            ET.SubElement(entry, "title").text = f"{date}: {weather_desc}, {temp}°C"
-            ET.SubElement(entry, "description").text = (
-                f"<img src='{icon_url}' width='64' height='64'><br>"
-                f"Temperatura: {temp}°C - {weather_desc}"
-            )
-            ET.SubElement(entry, "link").text = "https://seu-dominio.com/rss"
-            ET.SubElement(entry, "pubDate").text = date
-            enclosure = ET.SubElement(entry, "enclosure")
-            enclosure.set("url", icon_url)
-            enclosure.set("type", "image/png")
-    
-    return ET.tostring(rss, encoding='utf8', method='xml')
+def get_xibo_icon(weather_icon_code):
+    """Retorna a URL do ícone do Xibo correspondente ao código do OpenWeatherMap."""
+    xibo_icon_id = icon_map.get(weather_icon_code, "48165")  # Ícone padrão: céu limpo (dia)
+    return f"http://m.onemidia.tv.br/library/preview/{xibo_icon_id}"
 
 @app.route("/rss")
-def rss_feed():
-    response = requests.get(API_URL)
-    if response.status_code == 200:
-        rss = generate_rss(response.json())
-        return Response(rss, mimetype='application/rss+xml')
-    return "Erro ao obter dados", 500
+def generate_rss():
+    """Gera o feed RSS com os dados da previsão do tempo formatados para o Xibo."""
+    response = requests.get(URL)
+    weather_data = response.json()
+
+    rss = ET.Element("rss", version="2.0", xmlns_media="http://search.yahoo.com/mrss/")
+    channel = ET.SubElement(rss, "channel")
+    ET.SubElement(channel, "title").text = "Previsão do Tempo - Taquaritinga"
+    ET.SubElement(channel, "link").text = "http://m.onemidia.tv.br"
+    ET.SubElement(channel, "description").text = "Previsão do tempo para os próximos dias"
+
+    for forecast in weather_data["list"][:5]:  # Pegando apenas os primeiros 5 períodos
+        weather_icon_code = forecast["weather"][0]["icon"]
+        icon_url = get_xibo_icon(weather_icon_code)
+        temp = forecast["main"]["temp"]
+        description = forecast["weather"][0]["description"].capitalize()
+
+        item = ET.SubElement(channel, "item")
+        ET.SubElement(item, "title").text = "Previsão do Tempo"
+        ET.SubElement(item, "description").text = f"{description} - {temp}°C"
+        ET.SubElement(item, "link").text = "http://m.onemidia.tv.br"
+        media_content = ET.SubElement(item, "media:content", url=icon_url, type="image/png")
+
+    rss_feed = ET.tostring(rss, encoding="utf-8", method="xml").decode()
+    return Response(rss_feed, mimetype="application/xml")
 
 if __name__ == "__main__":
-    app.run(host="0.0.0.0", port=8000)
+    app.run(host="0.0.0.0", port=5000, debug=True)
