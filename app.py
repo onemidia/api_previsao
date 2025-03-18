@@ -1,17 +1,19 @@
 from flask import Flask, Response
 import requests
 import xml.etree.ElementTree as ET
-import os
-
-# Obtendo variáveis do ambiente
-OPENWEATHER_API_KEY = os.getenv("OPENWEATHER_API_KEY")
-CITY = os.getenv("CITY", "Taquaritinga")
-COUNTRY = os.getenv("COUNTRY", "BR")
-XIBO_ICON_URL = os.getenv("XIBO_ICON_URL", "https://seu-xibo.com/icones")
+from config import OPENWEATHER_API_KEY, CITY, COUNTRY
 
 app = Flask(__name__)
 
 API_URL = f"http://api.openweathermap.org/data/2.5/forecast?q={CITY},{COUNTRY}&appid={OPENWEATHER_API_KEY}&units=metric&lang=pt"
+
+XIBO_ICON_BASE_URL = "http://m.onemidia.tv.br/library/download"
+
+ICON_MAPPING = {
+    "01d": 48165, "01n": 48166, "02d": 48170, "02n": 48168, "03d": 48169, "03n": 48167,
+    "04d": 48171, "04n": 48172, "09d": 48174, "09n": 48173, "10d": 48177, "10n": 48176,
+    "11d": 48175, "11n": 48178, "13d": 48179, "13n": 48180, "50d": 48152, "50n": 48149
+}
 
 def generate_rss(data):
     rss = ET.Element("rss", version="2.0")
@@ -30,7 +32,8 @@ def generate_rss(data):
             temp = item['main']['temp']
             weather_desc = item['weather'][0]['description'].capitalize()
             icon_code = item['weather'][0]['icon']
-            icon_url = f"{XIBO_ICON_URL}/{icon_code}.png"
+            icon_id = ICON_MAPPING.get(icon_code, 48165)  # Padrão para 01d caso não encontre
+            icon_url = f"{XIBO_ICON_BASE_URL}/{icon_id}?preview=1"
             
             ET.SubElement(entry, "title").text = f"{date}: {weather_desc}, {temp}°C"
             ET.SubElement(entry, "description").text = f"Temperatura: {temp}°C - {weather_desc}"
